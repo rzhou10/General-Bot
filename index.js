@@ -1,5 +1,5 @@
 const config = require("./config.json");
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, Formatters } = require("discord.js");
 const axios = require("axios");
 
 const client = new Client({
@@ -23,12 +23,12 @@ client.on("messageCreate", async function (message) {
   const args = commandBody.split(' ');
   const command = args.shift().toLowerCase();
 
+  const channel = client.channels.cache.get(message.channelId);
+
   if (command === "pokemon") {
     const nationalDexId = args[0];
 
     const pokemon = await axios.get(`https://pokeapi.co/api/v2/pokemon/${nationalDexId}/`);
-
-    const channel = client.channels.cache.get(message.channelId);
     if (pokemon.data.name === args[1]) {
       channel.send('Congrats, you guessed correctly!');
     } else {
@@ -39,12 +39,27 @@ client.on("messageCreate", async function (message) {
   if (command === "weather") {
     const weather = await axios.get(`http://api.weatherapi.com/v1/current.json?key=${config.WEATHER_API_KEY}q=${config.WEATHER_LOCATION}&aqi=no`);
 
-    const channel = client.channels.cache.get(message.channelId);
-
     channel.send(`It is currently ${weather.data.current.temp_f} in ${config.WEATHER_LOCATION}`);
   }
 
-  
+  if (command === "metalarchives") {
+    const bandName = args[0];
+    const band = (await axios.get(`https://metal-api.dev/search/bands/name/${bandName}`)).data;
+    channel.send("Searching bands....");
+
+    let message = '';
+    let index = 0;
+
+    // TODO: Refactor so that the message can be filtered and paginated
+    while (message.length < 1800) {
+
+       message += `\n${band[index].name} (${band[index].country})\n[Metal Archives](${band[index].link})`;
+       index++;
+    }
+
+    channel.send(message);
+  }
+
 });
 
 console.log("General bot finished loading!")
