@@ -60,10 +60,65 @@ client.on("messageCreate", async function (message) {
 
     if (videos.data.items.length > 0) {
       const vids = videos.data.items.slice(2);
-      channel.send(`Heavy Metallurgy recent videos: [${vids[0].snippet.title}](https://www.youtube.com/watch?v=VGzkVWX5Ufs${vids[0].id.videoId}) and [${vids[1].snippet.title}](https://www.youtube.com/watch?v=VGzkVWX5Ufs${vids[1].id.videoId})`);
+      channel.send(`Heavy Metallurgy recent videos: [${vids[0].snippet.title}](https://www.youtube.com/watch?v=${vids[0].id.videoId}) and [${vids[1].snippet.title}](https://www.youtube.com/watch?v=${vids[1].id.videoId})`);
     } else {
       channel.send(`No new videos from Heavy Metallurgy!`);
     }
+  } else if (command === "lfm") {
+    channel.send(`Compiling stats...`);
+
+    const baseUrl = 'http://ws.audioscrobbler.com/2.0/';
+    let message = '';
+
+    if (args[0] === 'stats') {
+      const infoUrl = `${baseUrl}?method=user.getinfo&user=${config.LASTFM_USERNAME}&api_key=${config.LASTFM_KEY}&format=json`;
+
+      const startDate = new Date('2022-01-01');
+      const dayDifference = Math.round((Math.abs(startDate.getTime() - new Date().getTime())) / (1000 * 60 * 60 * 24))
+
+      const userData = (await axios.get(infoUrl)).data.user
+      const averageScrobblesPerDay = (userData.playcount / dayDifference).toFixed(2);
+      const albumsPerArtist = (userData.album_count / userData.artist_count).toFixed(2);
+
+      message = `Average scrobbles per day: ${averageScrobblesPerDay}\nAverage album per artist: ${albumsPerArtist}`;
+
+      let counter = 1;
+
+      let count1000 = 0;
+      let count500 = 0;
+      let count100 = 0;
+      let count50 = 0;
+
+      while (counter < 21) {
+        const artistUrl = `${baseUrl}?method=user.gettopartists&user=${config.LASTFM_USERNAME}&api_key=${config.LASTFM_KEY}&format=json&page=${counter}`;
+        const userArtistData = await axios.get(artistUrl);
+
+        userArtistData.data.topartists.artist.forEach((artist) => {
+          if (Number(artist.playcount) >= 1000) {
+            count1000++;
+          }
+          if (Number(artist.playcount) >= 500) {
+            count500++;
+          }
+          if (Number(artist.playcount) >= 100) {
+            count100++;
+          }
+          if (Number(artist.playcount) >= 50) {
+            count50++;
+          }
+        })
+        counter++
+      }
+
+      message += `\n\nArtist count by rank:\n\n${count1000} artists with 1000+ plays\n${count500} artists with 500+ plays\n${count100} artists with 100+ plays\n${count50} artists with 50+ plays`
+
+    } else {
+
+      // To do: compare stats with other users
+    }
+
+    channel.send(message);
+
   }
 }
 );

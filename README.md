@@ -8,6 +8,10 @@ If you're interest in using this, this is the `config.json` format.
 {
   "BOT_TOKEN": "",
   "WEATHER_API_KEY": "",
-  "WEATHER_LOCATION": ""
+  "WEATHER_LOCATION": "",
+  "YOUTUBE_KEY": ""
+  "LASTFM_KEY": "",
+  "LASTFM_SECRET": "",
+  "LASTFM_USERNAME": ""
 }
 ```
