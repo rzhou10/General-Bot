@@ -74,43 +74,60 @@ client.on("messageCreate", async function (message) {
       const infoUrl = `${baseUrl}?method=user.getinfo&user=${config.LASTFM_USERNAME}&api_key=${config.LASTFM_KEY}&format=json`;
 
       const startDate = new Date('2022-01-01');
-      const dayDifference = Math.round((Math.abs(startDate.getTime() - new Date().getTime())) / (1000 * 60 * 60 * 24))
+      const dayDifference = Math.round((Math.abs(startDate.getTime() - new Date().getTime())) / (1000 * 60 * 60 * 24));
+      let errorFetch = false;
 
-      const userData = (await axios.get(infoUrl)).data.user
-      const averageScrobblesPerDay = (userData.playcount / dayDifference).toFixed(2);
-      const albumsPerArtist = (userData.album_count / userData.artist_count).toFixed(2);
+      const result = await axios.get(infoUrl);
+      if (result.status === 200) {
 
-      message = `Average scrobbles per day: ${averageScrobblesPerDay}\nAverage album per artist: ${albumsPerArtist}`;
+        const userData = result.data.user
+        const averageScrobblesPerDay = (userData.playcount / dayDifference).toFixed(2);
+        const albumsPerArtist = (userData.album_count / userData.artist_count).toFixed(2);
 
-      let counter = 1;
+        message = `Average scrobbles per day: ${averageScrobblesPerDay}\nAverage album per artist: ${albumsPerArtist}`;
 
-      let count1000 = 0;
-      let count500 = 0;
-      let count100 = 0;
-      let count50 = 0;
+        let counter = 1;
 
-      while (counter < 21) {
-        const artistUrl = `${baseUrl}?method=user.gettopartists&user=${config.LASTFM_USERNAME}&api_key=${config.LASTFM_KEY}&format=json&page=${counter}`;
-        const userArtistData = await axios.get(artistUrl);
+        let count1000 = 0;
+        let count500 = 0;
+        let count100 = 0;
+        let count50 = 0;
 
-        userArtistData.data.topartists.artist.forEach((artist) => {
-          if (Number(artist.playcount) >= 1000) {
-            count1000++;
+        while (counter < 21) {
+          const artistUrl = `${baseUrl}?method=user.gettopartists&user=${config.LASTFM_USERNAME}&api_key=${config.LASTFM_KEY}&format=json&page=${counter}`;
+          const userArtistData = await axios.get(artistUrl);
+
+          if (userArtistData.status === 200) {
+
+            userArtistData.data.topartists.artist.forEach((artist) => {
+              if (Number(artist.playcount) >= 1000) {
+                count1000++;
+              }
+              if (Number(artist.playcount) >= 500) {
+                count500++;
+              }
+              if (Number(artist.playcount) >= 100) {
+                count100++;
+              }
+              if (Number(artist.playcount) >= 50) {
+                count50++;
+              }
+            })
+            counter++
+          } else {
+            errorFetch = true;
+            break;
           }
-          if (Number(artist.playcount) >= 500) {
-            count500++;
-          }
-          if (Number(artist.playcount) >= 100) {
-            count100++;
-          }
-          if (Number(artist.playcount) >= 50) {
-            count50++;
-          }
-        })
-        counter++
+        }
+
+        if (errorFetch) {
+          channel.send('An issue occurred with fetching top artists')
+        }
+
+        message += `\n\nArtist count by rank:\n\n${count1000} artists with 1000+ plays\n${count500} artists with 500+ plays\n${count100} artists with 100+ plays\n${count50} artists with 50+ plays`;
+      } else {
+        channel.send('An issue occurred with fetching user information')
       }
-
-      message += `\n\nArtist count by rank:\n\n${count1000} artists with 1000+ plays\n${count500} artists with 500+ plays\n${count100} artists with 100+ plays\n${count50} artists with 50+ plays`
 
     } else {
 
